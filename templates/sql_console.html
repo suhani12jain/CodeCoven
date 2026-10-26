@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}Interactive SQL Sandbox{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+  <div>
+    <h2 class="fw-bold text-white mb-1">Interactive SQL Console</h2>
+    <p class="text-muted mb-0">Execute ad-hoc analytical queries, verify ACID properties, and inspect query execution plans</p>
+  </div>
+</div>
+
+<div class="glass-panel p-4 mb-4">
+  <form method="POST" action="{{ url_for('sql_console') }}">
+    <div class="mb-3">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <label class="form-label text-muted small fw-semibold mb-0">Enter MySQL Query (SELECT, INSERT, DELETE, CREATE):</label>
+        <span class="badge badge-glass-info">Parameterized Engine</span>
+      </div>
+      <textarea id="sqlInput" name="sql_query" class="form-control sql-code-block" rows="5" required>{{ current_query|default('SELECT BinCode, ZoneName, CurrentFillLevel, Status FROM Bin b JOIN Zone z ON b.ZoneID = z.ZoneID WHERE b.CurrentFillLevel >= 75 ORDER BY CurrentFillLevel DESC;') }}</textarea>
+    </div>
+
+    <div class="mb-3">
+      <small class="text-muted fw-semibold d-block mb-2">SQL Operations:</small>
+      <div class="d-flex flex-wrap gap-2">
+        <button type="button" class="btn btn-cyan px-4" onclick="loadOperation('insert')">Insert</button>
+        <button type="button" class="btn btn-danger-glass px-4" onclick="loadOperation('delete')">Delete</button>
+        <button type="button" class="btn btn-emerald px-4" onclick="loadOperation('create')">Create</button>
+      </div>
+      <small class="text-muted d-block mt-2">Each button loads a ready-to-run statement. Review it, then click Execute Query.</small>
+    </div>
+
+    <!-- Quick Academic Preset Queries Buttons -->
+    <div class="mb-3">
+      <small class="text-muted fw-semibold d-block mb-2">⚡ Load Academic Preset Queries:</small>
+      <div class="d-flex flex-wrap gap-2">
+        <button type="button" class="btn btn-sm btn-glass text-cyan" onclick="loadQuery(1)">Q1: 3-Table Inner Join</button>
+        <button type="button" class="btn btn-sm btn-glass text-warning" onclick="loadQuery(8)">Q8: Scalar Subquery</button>
+        <button type="button" class="btn btn-sm btn-glass text-success" onclick="loadQuery(11)">Q11: Correlated Subquery</button>
+        <button type="button" class="btn btn-sm btn-glass text-info" onclick="loadQuery(15)">Q15: GROUP BY ROLLUP</button>
+        <button type="button" class="btn btn-sm btn-glass text-white" onclick="loadQuery(20)">Q20: ROW_NUMBER()</button>
+        <button type="button" class="btn btn-sm btn-glass text-emerald" onclick="loadQuery(25)">Q25: Complex CTE</button>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-emerald px-4 py-2">Execute Query ⚡</button>
+      <button type="reset" class="btn btn-glass" onclick="document.getElementById('sqlInput').value=''">Clear</button>
+    </div>
+  </form>
+</div>
+
+<!-- Query Results Display -->
+{% if results is not none %}
+<div class="glass-panel p-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex align-items-center gap-2">
+      <span class="badge badge-glass-success">QUERY RESULT</span>
+      <h6 class="fw-bold text-white mb-0">
+        {% if is_result_set %}
+          {{ row_count }} Rows Returned in {{ exec_time_ms }} ms
+        {% else %}
+          Statement OK — {{ row_count }} row(s) affected in {{ exec_time_ms }} ms
+        {% endif %}
+      </h6>
+    </div>
+  </div>
+
+  {% if columns and results %}
+    <div class="table-responsive" style="max-height: 450px;">
+      <table class="glass-table">
+        <thead>
+          <tr>
+            {% for col in columns %}
+              <th>{{ col }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in results %}
+            <tr>
+              {% for val in row %}
+                <td>{{ val }}</td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% elif is_result_set %}
+    <p class="text-muted mb-0">Query executed successfully. Zero rows returned.</p>
+  {% else %}
+    <p class="text-muted mb-0">DML/DDL statement executed successfully. No result set to display.</p>
+  {% endif %}
+</div>
+{% endif %}
+
+<script>
+const presetQueries = {
+  1: "SELECT b.BinCode, z.ZoneName, wc.CategoryName, b.CurrentFillLevel, b.Status FROM Bin b JOIN Zone z ON b.ZoneID = z.ZoneID JOIN Waste_Category wc ON b.CategoryID = wc.CategoryID ORDER BY b.CurrentFillLevel DESC LIMIT 15;",
+  8: "SELECT BinCode, CurrentFillLevel, Status, (SELECT ROUND(AVG(CurrentFillLevel), 2) FROM Bin) AS CityAverageFill FROM Bin WHERE CurrentFillLevel > (SELECT AVG(CurrentFillLevel) FROM Bin) ORDER BY CurrentFillLevel DESC;",
+  11: "SELECT b.BinCode, b.ZoneID, b.CurrentFillLevel, b.Status FROM Bin b WHERE b.CurrentFillLevel > (SELECT AVG(b_sub.CurrentFillLevel) FROM Bin b_sub WHERE b_sub.ZoneID = b.ZoneID) ORDER BY b.ZoneID, b.CurrentFillLevel DESC;",
+  15: "SELECT COALESCE(z.ZoneName, '--- ALL ZONES ---') AS ZoneName, COALESCE(wc.CategoryName, '--- ALL CATEGORIES ---') AS CategoryName, ROUND(SUM(cr.CollectedWeightKg), 2) AS TotalCollectedKg FROM Collection_Record cr JOIN Bin b ON cr.BinID = b.BinID JOIN Zone z ON b.ZoneID = z.ZoneID JOIN Waste_Category wc ON b.CategoryID = wc.CategoryID GROUP BY z.ZoneName, wc.CategoryName WITH ROLLUP;",
+  20: "WITH RankedReadings AS (SELECT sr.ReadingID, b.BinCode, sr.FillPercentage, sr.ReadingTimestamp, ROW_NUMBER() OVER (PARTITION BY sr.BinID ORDER BY sr.ReadingTimestamp DESC) AS RowSeq FROM Sensor_Reading sr JOIN Bin b ON sr.BinID = b.BinID) SELECT BinCode, FillPercentage, ReadingTimestamp FROM RankedReadings WHERE RowSeq <= 2 ORDER BY BinCode, RowSeq;",
+  25: "WITH ZoneTotals AS (SELECT z.ZoneName, COUNT(DISTINCT b.BinID) AS TotalBins, COALESCE(SUM(cr.CollectedWeightKg), 0.0) AS TotalKg FROM Zone z LEFT JOIN Bin b ON z.ZoneID = b.ZoneID LEFT JOIN Collection_Record cr ON b.BinID = cr.BinID GROUP BY z.ZoneID, z.ZoneName) SELECT ZoneName, TotalBins, TotalKg, DENSE_RANK() OVER (ORDER BY TotalKg DESC) AS WasteRank FROM ZoneTotals ORDER BY TotalKg DESC;"
+};
+
+function loadQuery(qid) {
+  if (presetQueries[qid]) {
+    document.getElementById('sqlInput').value = presetQueries[qid];
+  }
+}
+
+function loadOperation(kind) {
+  const stamp = Date.now().toString().slice(-6);
+  const operations = {
+    insert: "INSERT INTO Bin (BinCode, ZoneID, CategoryID, CapacityLitres, CurrentFillLevel, Latitude, Longitude, Status)\nVALUES ('BIN-SQL-" + stamp + "', 1, 1, 1100, 12.50, 12.97160000, 77.59460000, 'NORMAL');",
+    delete: "DELETE FROM Bin\nWHERE BinCode LIKE 'BIN-SQL-%'\nORDER BY BinID DESC\nLIMIT 1;",
+    create: "CREATE TABLE IF NOT EXISTS Sandbox_Sql_Demo (\n  DemoID INT AUTO_INCREMENT PRIMARY KEY,\n  Note VARCHAR(120) NOT NULL,\n  CreatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n) ENGINE=InnoDB;"
+  };
+  if (operations[kind]) {
+    document.getElementById('sqlInput').value = operations[kind];
+    document.getElementById('sqlInput').focus();
+  }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block title %}Executive Sanitation Dashboard{% endblock %}
+
+{% block content %}
+<!-- Executive Header -->
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+  <div>
+    <h2 class="fw-bold text-white mb-1">Sanitation & Recycling Command Center</h2>
+    <p class="text-muted mb-0">Real-time IoT Telemetry, Dispatch Logistics, and Circular Economy KPIs</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('ai_insights') }}" class="btn btn-emerald d-flex align-items-center gap-2">
+      <span>🤖</span> Run AI Predictive Scan
+    </a>
+    <a href="{{ url_for('schema_view') }}" class="btn btn-glass d-flex align-items-center gap-2">
+      <span>📐</span> View ER Schema
+    </a>
+  </div>
+</div>
+
+<!-- 4 Glowing KPI Metric Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="glass-panel kpi-card glass-panel-lift">
+      <div class="text-muted small text-uppercase fw-semibold mb-1">Total Smart Bins</div>
+      <div class="kpi-value text-white">{{ stats.total_bins|default(30) }}</div>
+      <div class="mt-2 text-cyan small">● IoT Connected & Geotagged</div>
+    </div>
+  </div>
+
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="glass-panel kpi-card glass-panel-lift">
+      <div class="text-muted small text-uppercase fw-semibold mb-1">Gross Waste Collected</div>
+      <div class="kpi-value text-emerald" style="color: #34d399;">{{ stats.total_collected_tons|default('142.8') }} <span style="font-size: 1.1rem; font-weight: normal;">Tons</span></div>
+      <div class="mt-2 text-muted small">Across 15 Municipal Zones</div>
+    </div>
+  </div>
+
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="glass-panel kpi-card glass-panel-lift">
+      <div class="text-muted small text-uppercase fw-semibold mb-1">Recycling Recovery Rate</div>
+      <div class="kpi-value text-warning">{{ stats.recycling_rate|default('76.4') }}%</div>
+      <div class="mt-2 text-warning small">Target: 70% (Achieved)</div>
+    </div>
+  </div>
+
+  <div class="col-12 col-sm-6 col-xl-3">
+    <div class="glass-panel kpi-card glass-panel-lift">
+      <div class="text-muted small text-uppercase fw-semibold mb-1">Active Grievances</div>
+      <div class="kpi-value text-danger" style="color: #fb7185;">{{ stats.pending_complaints|default(7) }}</div>
+      <div class="mt-2 text-danger small">Requires Supervisor Attention</div>
+    </div>
+  </div>
+</div>
+
+<!-- Critical Overflow Alerts Section -->
+<div class="glass-panel p-4 mb-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex align-items-center gap-2">
+      <span class="badge badge-glass-danger">CRITICAL ALERTS</span>
+      <h5 class="fw-bold text-white mb-0">Bins Exceeding Operational Threshold (≥ 85%)</h5>
+    </div>
+    <span class="text-muted small">Trigger: Sensor_Reading.FillPercentage ≥ 90%</span>
+  </div>
+
+  <div class="table-responsive">
+    <table class="glass-table">
+      <thead>
+        <tr>
+          <th>Bin Code</th>
+          <th>Zone</th>
+          <th>Waste Category</th>
+          <th>Capacity</th>
+          <th>Current Fill</th>
+          <th>Status</th>
+          <th>Last Service</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if critical_bins %}
+          {% for b in critical_bins %}
+            <tr>
+              <td class="fw-bold text-white">{{ b.BinCode }}</td>
+              <td>{{ b.ZoneName }}</td>
+              <td>{{ b.CategoryName }}</td>
+              <td>{{ b.CapacityLitres }} L</td>
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <div class="progress flex-grow-1" style="height: 6px; background: rgba(255,255,255,0.1);">
+                    <div class="progress-bar bg-danger" style="width: {{ b.CurrentFillLevel }}%;"></div>
+                  </div>
+                  <span class="fw-bold text-danger">{{ b.CurrentFillLevel }}%</span>
+                </div>
+              </td>
+              <td>
+                <span class="badge badge-glass-danger">{{ b.Status }}</span>
+              </td>
+              <td class="text-muted small">{{ b.HoursSinceLastService|default(36) }} hrs ago</td>
+              <td>
+                <form method="POST" action="{{ url_for('emergency_pickup', bin_id=b.BinID) }}" class="d-inline">
+                  <button type="submit" class="btn btn-sm btn-emerald py-1 px-2" title="Executes sp_assign_emergency_pickup">
+                    ⚡ Dispatch Pickup
+                  </button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="8" class="text-center text-muted py-3">All bins operating within normal fill levels.</td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Charts Overview Row -->
+<div class="row g-4 mb-4">
+  <div class="col-12 col-lg-7">
+    <div class="glass-panel p-4 h-100">
+      <h5 class="fw-bold text-white mb-3">Zone-Wise Waste Generation (kg)</h5>
+      <div style="height: 280px;">
+        <canvas id="zoneWasteChart" 
+                data-labels='{{ chart_zone_labels|tojson }}' 
+                data-values='{{ chart_zone_values|tojson }}'></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-5">
+    <div class="glass-panel p-4 h-100">
+      <h5 class="fw-bold text-white mb-3">Recycling Conversion by Stream</h5>
+      <div style="height: 280px;">
+        <canvas id="categoryRecyclingChart"
+                data-labels='{{ chart_cat_labels|tojson }}'
+                data-rates='{{ chart_cat_rates|tojson }}'></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

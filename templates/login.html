@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Sign In - SWMRS{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center align-items-center" style="min-height: 75vh;">
+  <div class="col-12 col-md-8 col-lg-5">
+    <div class="glass-panel p-4 p-md-5">
+      <div class="text-center mb-4">
+        <span style="font-size: 2.8rem;">♻️</span>
+        <h3 class="fw-bold mt-2 text-white">SWMRS Portal</h3>
+        <p class="text-muted small">Role-Based Database Access Control (RBAC)</p>
+      </div>
+
+      <form method="POST" action="{{ url_for('login') }}">
+        <div class="mb-3">
+          <label class="form-label text-muted small fw-semibold">Username</label>
+          <input type="text" id="usernameInput" name="username" class="form-control" placeholder="Enter username" required value="admin">
+        </div>
+
+        <div class="mb-4">
+          <label class="form-label text-muted small fw-semibold">Password</label>
+          <input type="password" id="passwordInput" name="password" class="form-control" placeholder="Enter password" required value="password123">
+        </div>
+
+        <button type="submit" class="btn btn-emerald w-100 py-2 mb-4">Authenticate & Enter</button>
+
+        <div class="border-top border-secondary pt-3">
+          <p class="text-muted small mb-2 text-center fw-semibold">⚡ One-Click Examiner Test Credentials:</p>
+          <div class="d-flex flex-wrap gap-2 justify-content-center">
+            <button type="button" class="btn btn-sm btn-glass text-cyan" onclick="fillCreds('admin', 'password123')">Admin</button>
+            <button type="button" class="btn btn-sm btn-glass text-warning" onclick="fillCreds('super_rahul', 'password123')">Supervisor</button>
+            <button type="button" class="btn btn-sm btn-glass text-success" onclick="fillCreds('driver_amit', 'password123')">Driver</button>
+            <button type="button" class="btn btn-sm btn-glass text-info" onclick="fillCreds('citizen_anita', 'password123')">Citizen</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function fillCreds(u, p) {
+  document.getElementById('usernameInput').value = u;
+  document.getElementById('passwordInput').value = p;
+}
+</script>
+{% endblock %}

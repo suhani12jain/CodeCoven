@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Database ER Diagram & Schema Metadata{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+  <div>
+    <h2 class="fw-bold text-white mb-1">Database Architecture & Live Schema</h2>
+    <p class="text-muted mb-0">Entity-Relationship Visual Model and INFORMATION_SCHEMA Column Metadata</p>
+  </div>
+</div>
+
+<!-- Interactive Mermaid ER Diagram Card -->
+<div class="glass-panel p-4 mb-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex align-items-center gap-2">
+      <span class="badge badge-glass-success">CONCEPTUAL DESIGN</span>
+      <h5 class="fw-bold text-white mb-0">Entity-Relationship (ER) Diagram</h5>
+    </div>
+    <span class="text-muted small">Mermaid.js Live Vector Rendering</span>
+  </div>
+
+  <div class="p-3 rounded-3 overflow-x-auto text-center" style="background: rgba(10, 15, 30, 0.6); border: 1px solid rgba(255,255,255,0.08);">
+    <div class="mermaid">
+erDiagram
+    USERS ||--o| DRIVER_EMPLOYEE : "specializes into"
+    USERS ||--o| CITIZEN : "specializes into"
+    ZONE ||--o{ BIN : "contains"
+    ZONE ||--o{ COLLECTION_ROUTE : "covers"
+    ZONE ||--o{ CITIZEN : "resides in"
+    ZONE ||--o{ RECYCLING_FACILITY : "hosts"
+    WASTE_CATEGORY ||--o{ BIN : "designated for"
+    WASTE_CATEGORY ||--o{ RECYCLING_BATCH : "classified as"
+    COLLECTION_VEHICLE ||--o{ COLLECTION_ROUTE : "assigned to"
+    COLLECTION_VEHICLE ||--o{ COLLECTION_RECORD : "transports"
+    DRIVER_EMPLOYEE ||--o{ COLLECTION_ROUTE : "navigates"
+    DRIVER_EMPLOYEE ||--o{ COLLECTION_RECORD : "executes"
+    COLLECTION_ROUTE ||--o{ COLLECTION_RECORD : "contains"
+    BIN ||--o{ COLLECTION_RECORD : "emptied during"
+    BIN ||--o{ SENSOR_READING : "emits telemetry"
+    BIN ||--o{ COMPLAINT : "subject of"
+    BIN ||--o{ AI_PREDICTION : "evaluated by"
+    CITIZEN ||--o{ COMPLAINT : "lodges"
+    RECYCLING_FACILITY ||--o{ RECYCLING_BATCH : "processes"
+    </div>
+  </div>
+</div>
+
+<!-- Live Schema from INFORMATION_SCHEMA -->
+<div class="glass-panel p-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex align-items-center gap-2">
+      <span class="badge badge-glass-info">PHYSICAL METADATA</span>
+      <h5 class="fw-bold text-white mb-0">Live Database Schema (via INFORMATION_SCHEMA.COLUMNS)</h5>
+    </div>
+    <code class="text-cyan small">SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE, IS_NULLABLE, COLUMN_KEY...</code>
+  </div>
+
+  <div class="accordion" id="schemaAccordion">
+    {% for table_name, cols in schema_tables.items() %}
+    <div class="accordion-item glass-panel mb-2" style="background: rgba(15,23,42,0.6); border: 1px solid rgba(255,255,255,0.08);">
+      <h2 class="accordion-header" id="heading{{ loop.index }}">
+        <button class="accordion-button {% if not loop.first %}collapsed{% endif %} text-white" 
+                type="button" 
+                data-bs-toggle="collapse" 
+                data-bs-target="#collapse{{ loop.index }}" 
+                style="background: transparent; box-shadow: none;">
+          <span class="fw-bold text-emerald me-2">TABLE:</span> {{ table_name }} 
+          <span class="badge badge-glass-info ms-3" style="font-size: 0.7rem;">{{ cols|length }} Columns</span>
+        </button>
+      </h2>
+      <div id="collapse{{ loop.index }}" class="accordion-collapse collapse {% if loop.first %}show{% endif %}" data-bs-parent="#schemaAccordion">
+        <div class="accordion-body p-0">
+          <table class="glass-table mb-0">
+            <thead>
+              <tr>
+                <th>Column Name</th>
+                <th>Data Type</th>
+                <th>Nullable</th>
+                <th>Key</th>
+                <th>Default Value</th>
+                <th>Extra</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for c in cols %}
+              <tr>
+                <td class="fw-bold text-white">{{ c.COLUMN_NAME }}</td>
+                <td class="text-cyan"><code>{{ c.COLUMN_TYPE }}</code></td>
+                <td>{{ c.IS_NULLABLE }}</td>
+                <td>
+                  {% if c.COLUMN_KEY == 'PRI' %}
+                    <span class="badge badge-glass-success">PRIMARY KEY</span>
+                  {% elif c.COLUMN_KEY == 'UNI' %}
+                    <span class="badge badge-glass-warning">UNIQUE</span>
+                  {% elif c.COLUMN_KEY == 'MUL' %}
+                    <span class="badge badge-glass-info">INDEX / FK</span>
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+                <td class="text-muted small">{{ c.COLUMN_DEFAULT|default('NULL') }}</td>
+                <td class="text-muted small">{{ c.EXTRA }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

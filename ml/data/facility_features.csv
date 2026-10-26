@@ -1,0 +1,11 @@
+facility_id,facility_name,primary_category,daily_capacity_tons,cost_per_ton,lat,lon
+1,EcoCycle Green Composting Plant,Organic,150.0,850.0,18.532,73.854
+2,PolyReclaim Plastics Refinery,Plastic,200.0,1400.0,18.51,73.91
+3,KagazCraft Pulp & Cardboard Mills,Paper,120.0,950.0,18.495,73.832
+4,MetalForge Scrap Smelting Yard,Metal,250.0,1800.0,18.505,73.925
+5,Vitreous Clean Glass Melting Works,Glass,80.0,1100.0,18.57,73.89
+6,CircuitSafe Urban E-Waste Recycler,Electronic Waste,50.0,3200.0,18.56,73.79
+7,BioClean Medical Autoclave Facility,Hazardous,40.0,4500.0,18.48,73.86
+8,Apex Material Recovery Facility,Plastic,300.0,1600.0,18.525,73.85
+9,Western Suburbs Composting Yard,Organic,90.0,880.0,18.515,73.78
+10,Harbor Secondary Smelting Unit,Metal,180.0,1950.0,18.502,73.93
