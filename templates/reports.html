@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+{% block title %}Analytical Reports & Database Views{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+  <div>
+    <h2 class="fw-bold text-white mb-1">Analytical Reports & Database Views</h2>
+    <p class="text-muted mb-0">Pre-computed aggregations, SLA tracking, and circular economy performance metrics</p>
+  </div>
+</div>
+
+<!-- Tab Navigation for the 5 Views -->
+<ul class="nav nav-pills mb-4 gap-2" id="reportTabs" role="tablist">
+  <li class="nav-item">
+    <button class="nav-link active btn-glass text-white" id="v1-tab" data-bs-toggle="pill" data-bs-target="#v1">
+      📊 Zone Waste Summary
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link btn-glass text-white" id="v2-tab" data-bs-toggle="pill" data-bs-target="#v2">
+      ♻️ Recycling by Category
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link btn-glass text-white" id="v3-tab" data-bs-toggle="pill" data-bs-target="#v3">
+      ⚠️ Overflowing Bins
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link btn-glass text-white" id="v4-tab" data-bs-toggle="pill" data-bs-target="#v4">
+      🚚 Driver KPIs
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link btn-glass text-white" id="v5-tab" data-bs-toggle="pill" data-bs-target="#v5">
+      📋 Complaint Aging
+    </button>
+  </li>
+</ul>
+
+<div class="tab-content" id="reportTabContent">
+  <!-- View 1: Zone Waste Summary -->
+  <div class="tab-pane fade show active" id="v1">
+    <div class="glass-panel p-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold text-white mb-0">View: vw_zone_waste_summary</h5>
+        <code class="text-cyan small">SELECT * FROM vw_zone_waste_summary;</code>
+      </div>
+      <div class="table-responsive">
+        <table class="glass-table">
+          <thead>
+            <tr>
+              <th>Zone Name</th>
+              <th>Population Density</th>
+              <th>Bins</th>
+              <th>Total Collected (Kg)</th>
+              <th>Waste Density (Kg/km²)</th>
+              <th>Target Rate</th>
+              <th>Avg Fill Level</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in v1_data %}
+            <tr>
+              <td class="fw-bold text-white">{{ r.ZoneName }}</td>
+              <td>{{ r.PopulationDensity }} / km²</td>
+              <td>{{ r.TotalBins }}</td>
+              <td class="text-emerald fw-bold">{{ r.TotalCollectedKg }} kg</td>
+              <td>{{ r.WasteDensityKgPerSqKm }}</td>
+              <td><span class="badge badge-glass-success">{{ r.TargetRecyclingRate }}%</span></td>
+              <td>{{ r.AvgBinFillLevel }}%</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- View 2: Recycling Rate by Category -->
+  <div class="tab-pane fade" id="v2">
+    <div class="glass-panel p-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold text-white mb-0">View: vw_recycling_rate_by_category</h5>
+        <code class="text-cyan small">SELECT * FROM vw_recycling_rate_by_category;</code>
+      </div>
+      <div class="table-responsive">
+        <table class="glass-table">
+          <thead>
+            <tr>
+              <th>Category Stream</th>
+              <th>Target Recycling %</th>
+              <th>Total Input (Kg)</th>
+              <th>Output Recycled (Kg)</th>
+              <th>Actual Recycling Rate</th>
+              <th>Average Purity</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in v2_data %}
+            <tr>
+              <td class="fw-bold text-white">{{ r.CategoryName }}</td>
+              <td>{{ r.TargetRecyclingPct }}%</td>
+              <td>{{ r.TotalInputKg }} kg</td>
+              <td class="text-cyan fw-bold">{{ r.TotalRecycledKg }} kg</td>
+              <td>
+                <span class="badge {% if r.ActualRecyclingRatePct >= r.TargetRecyclingPct %}badge-glass-success{% else %}badge-glass-warning{% endif %}">
+                  {{ r.ActualRecyclingRatePct }}%
+                </span>
+              </td>
+              <td>{{ r.AvgBatchPurity }}%</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- View 3: Overflowing Bins -->
+  <div class="tab-pane fade" id="v3">
+    <div class="glass-panel p-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold text-white mb-0">View: vw_overflowing_bins</h5>
+        <code class="text-cyan small">SELECT * FROM vw_overflowing_bins;</code>
+      </div>
+      <div class="table-responsive">
+        <table class="glass-table">
+          <thead>
+            <tr>
+              <th>Bin Code</th>
+              <th>Zone</th>
+              <th>Category</th>
+              <th>Current Fill</th>
+              <th>Status</th>
+              <th>Hours Since Service</th>
+              <th>Location</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in v3_data %}
+            <tr>
+              <td class="fw-bold text-white">{{ r.BinCode }}</td>
+              <td>{{ r.ZoneName }}</td>
+              <td>{{ r.CategoryName }}</td>
+              <td class="text-danger fw-bold">{{ r.CurrentFillLevel }}%</td>
+              <td><span class="badge badge-glass-danger">{{ r.Status }}</span></td>
+              <td>{{ r.HoursSinceLastService }} hrs</td>
+              <td class="text-muted small">{{ r.Latitude }}, {{ r.Longitude }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- View 4: Driver Performance -->
+  <div class="tab-pane fade" id="v4">
+    <div class="glass-panel p-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold text-white mb-0">View: vw_driver_performance</h5>
+        <code class="text-cyan small">SELECT * FROM vw_driver_performance;</code>
+      </div>
+      <div class="table-responsive">
+        <table class="glass-table">
+          <thead>
+            <tr>
+              <th>Driver Name</th>
+              <th>Shift</th>
+              <th>Experience</th>
+              <th>Rating</th>
+              <th>Routes Assigned</th>
+              <th>Bins Emptied</th>
+              <th>Total Weight Collected</th>
+              <th>Avg Weight / Bin</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in v4_data %}
+            <tr>
+              <td class="fw-bold text-white">{{ r.DriverName }}</td>
+              <td>{{ r.Shift }}</td>
+              <td>{{ r.ExperienceYears }} yrs</td>
+              <td><span class="badge badge-glass-warning">★ {{ r.Rating }}</span></td>
+              <td>{{ r.TotalRoutesAssigned }}</td>
+              <td>{{ r.TotalBinsEmptied }}</td>
+              <td class="text-emerald fw-bold">{{ r.TotalWeightCollectedKg }} kg</td>
+              <td>{{ r.AvgWeightPerBinKg }} kg</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- View 5: Pending Complaints -->
+  <div class="tab-pane fade" id="v5">
+    <div class="glass-panel p-4">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold text-white mb-0">View: vw_pending_complaints</h5>
+        <code class="text-cyan small">SELECT * FROM vw_pending_complaints;</code>
+      </div>
+      <div class="table-responsive">
+        <table class="glass-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Citizen Name</th>
+              <th>Phone</th>
+              <th>Zone</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th>Aging</th>
+              <th>SLA Urgency</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in v5_data %}
+            <tr>
+              <td class="text-muted">#{{ r.ComplaintID }}</td>
+              <td class="fw-bold text-white">{{ r.CitizenName }}</td>
+              <td class="text-muted small">{{ r.CitizenPhone }}</td>
+              <td>{{ r.ZoneName }}</td>
+              <td>{{ r.ComplaintType }}</td>
+              <td><span class="badge badge-glass-info">{{ r.Status }}</span></td>
+              <td>{{ r.AgingHours }} hrs ago</td>
+              <td>
+                {% if r.UrgencyLevel == 'SLA BREACHED' %}
+                  <span class="badge badge-glass-danger">SLA BREACHED</span>
+                {% elif r.UrgencyLevel == 'HIGH PRIORITY' %}
+                  <span class="badge badge-glass-warning">HIGH PRIORITY</span>
+                {% else %}
+                  <span class="badge badge-glass-success">NORMAL</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

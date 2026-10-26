@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Smart Waste Management & Recycling System{% endblock %} | SWMRS</title>
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  <!-- Custom Glassy Theme CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/glassy_theme.css') }}">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Mermaid.js for Schema / ER Diagram rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({startOnLoad:true, theme: 'dark'});</script>
+</head>
+<body>
+
+  <!-- Glassy Top Navigation -->
+  <nav class="navbar navbar-expand-lg glass-nav sticky-top py-3">
+    <div class="container-fluid px-4">
+      <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('index') }}">
+        <span style="font-size: 1.5rem;">♻️</span>
+        <span>SWMRS <small class="text-muted fw-normal" style="font-size: 0.75rem;">v3.0</small></span>
+      </a>
+      
+      <button class="navbar-toggler btn-glass" type="button" data-bs-toggle="collapse" data-bs-target="#navContent">
+        <span class="navbar-toggler-icon" style="filter: invert(1);"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navContent">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-3 gap-1">
+          <li class="nav-item">
+            <a class="nav-link text-light px-3 py-1 rounded-3 {% if request.endpoint == 'index' %}btn-glass text-white{% endif %}" href="{{ url_for('index') }}">Dashboard</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link text-light px-3 py-1 rounded-3 {% if request.endpoint == 'manage_bins' %}btn-glass text-white{% endif %}" href="{{ url_for('manage_bins') }}">Smart Bins</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link text-light px-3 py-1 rounded-3 {% if request.endpoint == 'manage_collections' %}btn-glass text-white{% endif %}" href="{{ url_for('manage_collections') }}">Collections</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link text-light px-3 py-1 rounded-3 {% if request.endpoint == 'manage_complaints' %}btn-glass text-white{% endif %}" href="{{ url_for('manage_complaints') }}">Complaints</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link text-light px-3 py-1 rounded-3 {% if request.endpoint == 'reports' %}btn-glass text-white{% endif %}" href="{{ url_for('reports') }}">Reports & Views</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link text-light px-3 py-1 rounded-3 {% if request.endpoint == 'ai_insights' %}btn-glass text-white{% endif %}" href="{{ url_for('ai_insights') }}">
+              <span class="badge badge-glass-success me-1">AI/ML</span> Insights
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link text-light px-3 py-1 rounded-3 {% if request.endpoint == 'sql_console' %}btn-glass text-white{% endif %}" href="{{ url_for('sql_console') }}">SQL Console</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link text-light px-3 py-1 rounded-3 {% if request.endpoint == 'schema_view' %}btn-glass text-white{% endif %}" href="{{ url_for('schema_view') }}">ER & Schema</a>
+          </li>
+        </ul>
+
+        <!-- User Authentication & Role Display -->
+        <div class="d-flex align-items-center gap-3">
+          {% if session.get('user_id') %}
+            <span class="badge badge-glass-info">
+              👤 {{ session.get('full_name') }} ({{ session.get('role') }})
+            </span>
+            <a href="{{ url_for('logout') }}" class="btn btn-sm btn-danger-glass">Logout</a>
+          {% else %}
+            <a href="{{ url_for('login') }}" class="btn btn-sm btn-emerald">Sign In</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Flash Notification Messages -->
+  <div class="container-fluid px-4 mt-3">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show glass-panel text-white py-2 px-3 mb-3" role="alert">
+            <strong class="me-2">Notice:</strong> {{ message }}
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+  </div>
+
+  <!-- Primary Page Body -->
+  <main class="container-fluid px-4 py-3">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- =========================================================================
+       SQL CONSOLE / QUERY LOG PANEL (ON EVERY OPERATION)
+       Demonstrates: Front End -> Parameterized SQL Query -> Database -> Result
+       ========================================================================= -->
+  <div class="sql-drawer">
+    <button class="btn btn-glass shadow-lg d-flex align-items-center gap-2 border-emerald" onclick="toggleSqlDrawer()" style="border-color: rgba(16, 185, 129, 0.4);">
+      <span style="font-size: 1.1rem;">⚡</span>
+      <span class="fw-semibold">SQL Query Log</span>
+      <span class="badge bg-emerald text-dark fw-bold rounded-pill" style="background:#10b981;">{{ g.sql_logs|length if g.sql_logs is defined else 0 }}</span>
+    </button>
+  </div>
+
+  <div id="sqlDrawerPanel" class="sql-drawer-panel p-3">
+    <div class="d-flex justify-content-between align-items-center pb-2 mb-2 border-bottom border-secondary">
+      <div class="d-flex align-items-center gap-2">
+        <span style="font-size: 1.2rem;">🔍</span>
+        <h6 class="mb-0 text-white fw-bold">Live SQL Query Interceptor</h6>
+      </div>
+      <button class="btn btn-sm btn-link text-muted text-decoration-none" onclick="toggleSqlDrawer()">✕ Close</button>
+    </div>
+    
+    <div class="overflow-y-auto" style="max-height: 380px;">
+      {% if g.sql_logs is defined and g.sql_logs %}
+        {% for log in g.sql_logs %}
+          <div class="mb-3 p-2 rounded-3" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="badge badge-glass-success" style="font-size: 0.65rem;">EXECUTION TIME: {{ log.time_ms }} ms</span>
+              <span class="text-muted" style="font-size: 0.75rem;">Rows: {{ log.rowcount }}</span>
+            </div>
+            <pre class="sql-code-block mb-1"><code>{{ log.query }}</code></pre>
+            {% if log.params %}
+              <div class="text-muted" style="font-size: 0.75rem;">
+                <strong class="text-cyan">Bound Parameters:</strong> <code>{{ log.params }}</code>
+              </div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="text-center text-muted py-4">
+          <p class="mb-0">No database queries intercepted in this view.</p>
+        </div>
+      {% endif %}
+    </div>
+    <div class="pt-2 border-top border-secondary text-center">
+      <a href="{{ url_for('sql_console') }}" class="btn btn-sm btn-glass text-cyan w-100">Open Interactive SQL Console →</a>
+    </div>
+  </div>
+
+  <!-- Bootstrap 5 Bundle JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Custom Application JS -->
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

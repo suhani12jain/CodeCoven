@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}Citizen Grievance Redressal{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+  <div>
+    <h2 class="fw-bold text-white mb-1">Citizen Grievance Redressal</h2>
+    <p class="text-muted mb-0">Track and resolve complaints regarding overflowing bins, odor, or missed service</p>
+  </div>
+  <button class="btn btn-emerald" data-bs-toggle="modal" data-bs-target="#lodgeComplaintModal">
+    + Lodge New Grievance
+  </button>
+</div>
+
+<!-- Complaints Data Table -->
+<div class="glass-panel p-4">
+  <div class="table-responsive">
+    <table class="glass-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Citizen</th>
+          <th>Bin Code</th>
+          <th>Complaint Type</th>
+          <th>Description</th>
+          <th>Status</th>
+          <th>Lodged At</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in complaints %}
+        <tr>
+          <td class="text-muted">#{{ c.ComplaintID }}</td>
+          <td class="fw-bold text-white">{{ c.CitizenName }}</td>
+          <td>{{ c.BinCode|default('N/A') }}</td>
+          <td><span class="badge badge-glass-warning">{{ c.ComplaintType }}</span></td>
+          <td class="small" style="max-width: 250px;">{{ c.Description }}</td>
+          <td>
+            {% if c.Status == 'Resolved' %}
+              <span class="badge badge-glass-success">RESOLVED</span>
+            {% elif c.Status == 'In Progress' %}
+              <span class="badge badge-glass-info">IN PROGRESS</span>
+            {% else %}
+              <span class="badge badge-glass-danger">PENDING</span>
+            {% endif %}
+          </td>
+          <td class="text-muted small">{{ c.LodgedAt }}</td>
+          <td>
+            {% if c.Status != 'Resolved' and session.get('role') in ['Admin', 'Supervisor'] %}
+              <button class="btn btn-sm btn-cyan py-0 px-2" data-bs-toggle="modal" data-bs-target="#resolveModal{{ c.ComplaintID }}">Resolve</button>
+            {% else %}
+              <span class="text-muted small">Closed</span>
+            {% endif %}
+
+            <!-- Resolve Modal -->
+            <div class="modal fade" id="resolveModal{{ c.ComplaintID }}" tabindex="-1">
+              <div class="modal-dialog">
+                <div class="modal-content glass-panel p-3" style="background: rgba(15, 23, 42, 0.95);">
+                  <div class="modal-header border-secondary">
+                    <h5 class="modal-title text-white">Resolve Grievance #{{ c.ComplaintID }}</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                  </div>
+                  <form method="POST" action="{{ url_for('resolve_complaint', complaint_id=c.ComplaintID) }}">
+                    <div class="modal-body">
+                      <p class="text-muted small mb-2">Issue: <strong>{{ c.ComplaintType }}</strong></p>
+                      <div class="mb-3">
+                        <label class="form-label text-muted small">Supervisor Resolution Remarks</label>
+                        <textarea name="remarks" class="form-control" rows="3" placeholder="Action taken to remediate..." required></textarea>
+                      </div>
+                    </div>
+                    <div class="modal-footer border-secondary">
+                      <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Cancel</button>
+                      <button type="submit" class="btn btn-emerald">Mark Resolved</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Lodge Grievance Modal -->
+<div class="modal fade" id="lodgeComplaintModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content glass-panel p-3" style="background: rgba(15, 23, 42, 0.95);">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title text-white">Lodge Citizen Grievance</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{{ url_for('create_complaint') }}">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label text-muted small">Citizen Identity</label>
+            <select name="citizen_id" class="form-select" required>
+              {% for cit in citizens %}
+                <option value="{{ cit.CitizenID }}">{{ cit.CitizenName }} ({{ cit.Phone }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label text-muted small">Associated Smart Bin (Optional)</label>
+            <select name="bin_id" class="form-select">
+              <option value="">-- General Zone Issue / No Specific Bin --</option>
+              {% for b in bins %}
+                <option value="{{ b.BinID }}">{{ b.BinCode }} ({{ b.ZoneName }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label text-muted small">Complaint Nature</label>
+            <select name="complaint_type" class="form-select" required>
+              <option value="Overflowing Bin">Overflowing Bin</option>
+              <option value="Damaged Bin">Damaged Bin</option>
+              <option value="Foul Odour">Foul Odour</option>
+              <option value="Missed Collection">Missed Collection</option>
+              <option value="Illegal Dumping">Illegal Dumping</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label text-muted small">Detailed Description</label>
+            <textarea name="description" class="form-control" rows="3" placeholder="Provide details regarding location and issue..." required></textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-secondary">
+          <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-emerald">Lodge Complaint</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
